@@ -1,0 +1,403 @@
+import os
+import sys
+import pygame
+import random
+
+pygame.init()
+size = width, height = 1200, 700
+screen = pygame.display.set_mode(size)
+
+
+class Player(pygame.sprite.Sprite):
+	right = True
+
+	def __init__(self):
+		super().__init__()
+		self.image = load_image("player.png", -1)
+		self.rect = self.image.get_rect()
+		self.change_x = 0
+		self.change_y = 0
+
+	def update(self):
+		self.calc_grav()
+		self.rect.x += self.change_x
+		block_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
+
+		for block in block_hit_list:
+			if self.change_x > 0:
+				self.rect.right = block.rect.left
+			elif self.change_x < 0:
+				self.rect.left = block.rect.right
+		self.rect.y += self.change_y
+
+		block_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
+
+		for block in block_hit_list:
+			if self.change_y > 0:
+				self.rect.bottom = block.rect.top
+			elif self.change_y < 0:
+				self.rect.top = block.rect.bottom
+			self.change_y = 0
+
+	def calc_grav(self):
+		if self.change_y == 0:
+			self.change_y = 1
+		else:
+			self.change_y += .95
+		if self.rect.y >= SCREEN_HEIGHT - self.rect.height and self.change_y >= 0:
+			self.change_y = 0
+			self.rect.y = SCREEN_HEIGHT - self.rect.height
+
+	def jump(self):
+		self.rect.y += 10
+		platform_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
+		self.rect.y -= 10
+		if len(platform_hit_list) > 0 or self.rect.bottom >= SCREEN_HEIGHT:
+			self.change_y = -16
+
+	def go_left(self):
+		self.change_x = -9
+		if(self.right):
+			self.flip()
+			self.right = False
+
+	def go_right(self):
+		self.change_x = 9
+		if (not self.right):
+			self.flip()
+			self.right = True
+
+
+	def stop(self):
+		self.change_x = 0
+
+	def flip(self):
+		self.image = pygame.transform.flip(self.image, True, False)
+
+
+screen_rect = (0, 0, width, height)
+
+
+class Platform(pygame.sprite.Sprite):
+	def __init__(self, width, height):
+		super().__init__()
+		self.image = pygame.image.load('platform.png')
+		self.rect = self.image.get_rect()
+
+
+def generate_level(level):
+    new_player, x, y = None, None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '.':
+                Tile('empty', x, y)
+            elif level[y][x] == '#':
+                Tile('wall', x, y)
+            elif level[y][x] == '@':
+                Tile('empty', x, y)
+                new_player = Player(x, y)
+    return new_player, x, y
+
+
+class Camera:
+	def __init__(self):
+		self.dx = 0
+		self.dy = 0
+
+	def apply(self, obj):
+		obj.rect.x += self.dx
+		obj.rect.y += self.dy
+
+	def update(self, target):
+		self.dx = -(target.rect.x + target.rect.w // 2 - width // 2)
+		self.dy = -(target.rect.y + target.rect.h // 2 - height // 2)
+
+
+class Level(object):
+	def __init__(self, player):
+		self.platform_list = pygame.sprite.Group()
+		self.player = player
+
+	def update(self):
+		self.platform_list.update()
+
+	def draw(self, screen):
+		screen.blit(bg, (0, 0))
+		self.platform_list.draw(screen)
+
+
+class Level_01(Level):
+	def __init__(self, player):
+		Level.__init__(self, player)
+
+		level = [
+			[210, 32, 500, 500],
+			[210, 32, 200, 400],
+			[210, 32, 600, 300],
+		]
+
+		for platform in level:
+			block = Platform(platform[0], platform[1])
+			block.rect.x = platform[2]
+			block.rect.y = platform[3]
+			block.player = self.player
+			self.platform_list.add(block)
+
+
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tiles_group, all_sprites)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+
+
+def main():
+	pygame.init()
+	size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+	screen = pygame.display.set_mode(size)
+
+	pygame.display.set_caption("")
+	player = Player()
+	level_list = []
+	level_list.append(Level_01(player))
+	current_level_no = 0
+
+	current_level = level_list[current_level_no]
+	active_sprite_list = pygame.sprite.Group()
+	player.level = current_level
+
+	player.rect.x = 340
+	player.rect.y = SCREEN_HEIGHT - player.rect.height
+	active_sprite_list.add(player)
+
+	done = False
+
+	clock = pygame.time.Clock()
+
+	while not done:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				done = True
+
+			if event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_LEFT:
+					player.go_left()
+				if event.key == pygame.K_RIGHT:
+					player.go_right()
+				if event.key == pygame.K_UP:
+					player.jump()
+
+			if event.type == pygame.KEYUP:
+				if event.key == pygame.K_LEFT and player.change_x < 0:
+					player.stop()
+				if event.key == pygame.K_RIGHT and player.change_x > 0:
+					player.stop()
+
+		active_sprite_list.update()
+
+		current_level.update()
+
+		if player.rect.right > SCREEN_WIDTH:
+			player.rect.right = SCREEN_WIDTH
+
+		if player.rect.left < 0:
+			player.rect.left = 0
+
+		current_level.draw(screen)
+		active_sprite_list.draw(screen)
+
+		clock.tick(30)
+
+		pygame.display.flip()
+
+
+def load_image(name, colorkey=None):
+    if not os.path.isfile(name):
+        print(f"Файл с изображением '{name}' не найден")
+        sys.exit()
+
+    image = pygame.image.load(name)
+
+    if colorkey is not None:
+        image = image.convert()
+        if colorkey == -1:
+            colorkey = image.get_at((0, 0))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    global r
+    r = image
+    return image
+
+
+def load_level(filename):
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+
+    max_width = max(map(len, level_map))
+
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+
+
+class Particle(pygame.sprite.Sprite):
+    fire = [load_image("star.png")]
+    for scale in (5, 10, 20):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites2)
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+
+        self.velocity = [dx, dy]
+        self.rect.x, self.rect.y = pos
+
+        self.gravity = 1
+
+    def update(self):
+        self.velocity[1] += self.gravity
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
+
+
+def create_particles(position):
+    particle_count = 40
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
+
+
+d = [(0, 0), (105, 0), (210, 0), (0, 105), (0, 210), (105, 105)]
+
+
+class Bomb(pygame.sprite.Sprite):
+    image = load_image("gears_pygame.png", -1)
+    image = pygame.transform.scale(image, (100, 100))
+    global d, screen
+
+    def __init__(self, *group):
+        super().__init__(*group)
+        self.image = Bomb.image
+        self.i = Bomb.image
+        self.rect = self.image.get_rect()
+        self.rect.x = d[0][0]
+        self.rect.y = d[0][1]
+        self.x = 0
+        del d[0]
+
+    def update(self, *args):
+        self.image = pygame.transform.rotate(self.i, self.x - 1)
+        self.x -= 1
+
+
+c = Camera()
+player = Player()
+
+
+if __name__ == '__main__':
+    pygame.display.set_caption('Legends of Steampunk')
+
+    a = load_image("pygame_main.png")
+    a = pygame.transform.scale(a, (1200, 700))
+    sprite = pygame.sprite.Sprite()
+
+    image = load_image("gears_pygame.png", -1)
+    i = pygame.transform.scale(image, (75, 75))
+
+    sprite2 = pygame.sprite.Sprite()
+    sprite2.image = i
+
+    k = load_image("start.jpg", -1)
+    k = pygame.transform.scale(k, (265, 111))
+
+    sp = pygame.sprite.Sprite()
+    sp.image = k
+    sp.rect = sp.image.get_rect()
+    sp.rect.x = 474
+    sp.rect.y = 251
+
+    sprite2.rect = sprite2.image.get_rect()
+    sprite2.rect.x = 1045
+    sprite2.rect.y = 120
+
+    sprite.image = a
+    sprite.rect = sprite.image.get_rect()
+    sprite.rect.x = 0
+    sprite.rect.y = 0
+
+    b = pygame.sprite.Group()
+    b.add(sprite)
+    b.add(sprite2)
+    b.add(sp)
+    b.draw(screen)
+    all_sprites = pygame.sprite.Group()
+
+    for _ in range(6):
+        Bomb(all_sprites)
+
+    all_sprites.draw(screen)
+    pygame.display.flip()
+
+    running = True
+    ry = False
+    rt = False
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        if event.type == pygame.MOUSEBUTTONDOWN and \
+                sprite2.rect.collidepoint(event.pos):
+            screen.fill((0, 0, 0))
+            running = False
+            ry = True
+        elif event.type == pygame.MOUSEBUTTONDOWN and \
+                sp.rect.collidepoint(event.pos):
+             screen.fill((0, 0, 0))
+             running = False
+             rt = True
+        else:
+            screen.fill((0, 0, 0))
+            all_sprites.update()
+            b.draw(screen)
+            all_sprites.draw(screen)
+
+        pygame.display.flip()
+
+    clock = pygame.time.Clock()
+    all_sprites2 = pygame.sprite.Group()
+    a = 'НАСТРОЙКИ'
+    font = pygame.font.Font(None, 30)
+
+    while ry:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                create_particles(pygame.mouse.get_pos())
+        string_rendered = font.render(a, 1, pygame.Color('white'))
+        intro_rect = string_rendered.get_rect()
+        intro_rect.top = 200
+        intro_rect.x = 400
+        screen.fill((50, 50, 50))
+        screen.blit(string_rendered, intro_rect)
+        all_sprites2.update()
+        all_sprites2.draw(screen)
+        pygame.display.flip()
+        clock.tick(50)
+
+    while rt:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            else:
+                c.update(player);
+                for sprite in b:
+                    c.apply(sprite)
+                for sprite in all_sprites:
+                    c.apply(sprite)
+
+    pygame.quit()
