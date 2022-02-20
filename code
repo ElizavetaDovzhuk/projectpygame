@@ -1,0 +1,651 @@
+import os
+import sys
+import pygame
+import time
+import random
+
+pygame.init()
+size = width, height = 1200, 700
+screen = pygame.display.set_mode(size)
+
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.transform.scale(load_image("Gg.jpg", -1), (175, 300))
+        self.rect = self.image.get_rect()
+        self.a = ["Gg.jpg", "run.jpg",
+                  "run2.jpg", "run3.jpg",
+                  "run2.jpg", "run.jpg"]
+        self.b = ["left.jpg", "lrun.jpg",
+                  "lrun2.jpg", "lrun3.jpg",
+                  "lrun2.jpg", "lrun.jpg"]
+        self.r = 0
+        self.le = 0
+        self.j1 = 0
+        self.j2 = 0
+        self.f = True
+        self.f1 = True
+
+    def go_right(self, i, o, k):
+        self.mask = pygame.mask.from_surface(self.image)
+        if self.f:
+            u = 0
+            self.rect.x += 20
+            if pygame.sprite.spritecollideany(self, tiles_group):
+                if pygame.sprite.spritecollideany(self, tiles_group).rect.x > self.rect.x:
+                    u = 1
+            if u == 0:
+                for u in i:
+                    u.rect.x -= 20
+                for r in o:
+                    r.rect.x -= 20
+                k.rect.x -= 20
+            self.rect.x -= 20
+            self.f1 = False
+        self.image = pygame.transform.scale(load_image(self.a[self.r], -1), (175, 300))
+        if self.r < 5:
+            self.r += 1
+        else:
+            self.r = 0
+        self.f = True
+
+    def go_left(self, i, o, k):
+        self.mask = pygame.mask.from_surface(self.image)
+        if self.f1:
+            u = 0
+            self.rect.x -= 20
+            if pygame.sprite.spritecollideany(self, tiles_group):
+                if pygame.sprite.spritecollideany(self, tiles_group).rect.x < self.rect.x:
+                    u = 1
+            if u == 0:
+                for u in i:
+                    u.rect.x += 20
+                for r in o:
+                    r.rect.x += 20
+                k.rect.x += 20
+            self.rect.x += 20
+            self.f = False
+        self.image = pygame.transform.scale(load_image(self.b[self.r], -1), (175, 300))
+        if self.r < 5:
+            self.r += 1
+        else:
+            self.r = 0
+        self.f1 = True
+
+    def jump(self, i, o, k):
+        self.mask = pygame.mask.from_surface(self.image)
+        if self.f:
+            u = 0
+            self.rect.y -= 20
+            if pygame.sprite.spritecollideany(self, tiles_group):
+                if pygame.sprite.spritecollideany(self, tiles_group).rect.y < self.rect.y:
+                    u = 1
+            if u == 0:
+                for u in i:
+                    u.rect.y += 20
+                for r in o:
+                    r.rect.y += 20
+                k.rect.y += 20
+            self.rect.y += 20
+            self.f1 = False
+        self.image = pygame.transform.scale(load_image(self.a[self.r], -1), (175, 300))
+        if self.r < 5:
+            self.r += 1
+        else:
+            self.r = 0
+        self.f = True
+
+    def down(self, i, o, k):
+        self.mask = pygame.mask.from_surface(self.image)
+        if self.f1:
+            u = 0
+            self.rect.y += 20
+            if pygame.sprite.spritecollideany(self, tiles_group):
+                if pygame.sprite.spritecollideany(self, tiles_group).rect.y > self.rect.y:
+                    u = 1
+            if u == 0:
+                for u in i:
+                    u.rect.y -= 20
+                for r in o:
+                    r.rect.y -= 20
+                k.rect.y -= 20
+            self.rect.y -= 20
+        self.image = pygame.transform.scale(load_image(self.b[self.r], -1), (175, 300))
+        if self.r < 5:
+            self.r += 1
+        else:
+            self.r = 0
+        self.f1 = True
+
+
+screen_rect = (0, 0, width, height)
+
+
+def generate_level(level):
+    x, y = None, None
+    for y in range(len(level)):
+        for x in range(len(level[y])):
+            if level[y][x] == '#':
+                Tile('wall', x, y)
+            elif level[y][x] == '3':
+                Tile('grass', x, y)
+            elif level[y][x] == '$':
+                Money('money', x, y)
+            elif level[y][x] == '%':
+                Money('diamond', x, y)
+    return x, y
+
+
+class Tile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(tiles_group)
+        self.image = tile_images[tile_type]
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = tile_width * pos_x, tile_height * pos_y
+
+
+def load_image(name, colorkey=None):
+    if not os.path.isfile(name):
+        print(f"Файл с изображением '{name}' не найден")
+        sys.exit()
+
+    image = pygame.image.load(name)
+
+    if colorkey is not None:
+        image = image.convert()
+        if colorkey == -1:
+            colorkey = image.get_at((0, 0))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    global r
+    r = image
+    return image
+
+
+def load_level(filename):
+    with open(filename, 'r') as mapFile:
+        level_map = [line.strip() for line in mapFile]
+
+    max_width = max(map(len, level_map))
+
+    return list(map(lambda x: x.ljust(max_width, '.'), level_map))
+
+
+d = [(0, 0), (105, 0), (210, 0), (0, 105), (0, 210), (105, 105)]
+
+
+class Bomb(pygame.sprite.Sprite):
+    image = load_image("gears_pygame.png")
+    image = pygame.transform.scale(image, (100, 100))
+    global d, screen
+
+    def __init__(self, *group):
+        super().__init__(*group)
+        self.image = Bomb.image
+        self.i = Bomb.image
+        self.rect = self.image.get_rect()
+        self.rect.x = d[0][0]
+        self.rect.y = d[0][1]
+        self.x = 0
+        del d[0]
+
+    def update(self, *args):
+        self.image = pygame.transform.rotate(self.i, self.x - 1)
+        self.x -= 1
+
+
+class Money(pygame.sprite.Sprite):
+    def __init__(self, money_type, pos_x, pos_y):
+        super().__init__(money_group)
+        self.image = money_images[money_type]
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = 160 * pos_x, 160 * pos_y
+
+
+levels = ["a.txt", "b.txt", "p.txt"]
+
+
+if __name__ == '__main__':
+    pygame.display.set_caption('Legends of Steampunk')
+    true = True
+    tile_images = {
+        'wall': pygame.transform.scale(load_image("tile.jpg"), (160, 160)),
+        'grass': pygame.transform.scale(load_image("Tree.jpg"), (160, 160))
+    }
+
+    money_images = {
+        'money': pygame.transform.scale(load_image("Money.jpg", -1), (160, 160)),
+        'diamond': pygame.transform.scale(load_image("Brilliant.jpg", -1), (160, 160))
+    }
+
+    tile_width = tile_height = 160
+    next = 0
+    rt = 0
+    iop = 0
+
+    while true:
+        tiles_group = pygame.sprite.Group()
+        money_group = pygame.sprite.Group()
+        a = load_image("D6A4B1EC-D0F2-4C6D-916C-E4829749F13E.jpeg")
+        a = pygame.transform.scale(a, (1200, 700))
+        sprite = pygame.sprite.Sprite()
+        s1 = pygame.sprite.Sprite()
+        s2 = pygame.sprite.Sprite()
+
+        image = load_image("gears_pygame.png")
+        i = pygame.transform.scale(image, (75, 75))
+
+        sprite2 = pygame.sprite.Sprite()
+        sprite2.image = i
+
+        k = load_image("play_button.png", -1)
+        k = pygame.transform.scale(k, (400, 370))
+
+        sp = pygame.sprite.Sprite()
+        sp.image = k
+        sp.rect = sp.image.get_rect()
+        sp.rect.x = 400
+        sp.rect.y = 110
+
+        sprite2.rect = sprite2.image.get_rect()
+        sprite2.rect.x = 1045
+        sprite2.rect.y = 120
+
+        sprite.image = a
+        sprite.rect = sprite.image.get_rect()
+        sprite.rect.x = 0
+        sprite.rect.y = 0
+
+        b = pygame.sprite.Group()
+        b.add(sprite)
+        b.add(sprite2)
+        b.add(sp)
+        all_sprites = pygame.sprite.Group()
+        d = [(0, 0), (105, 0), (210, 0), (0, 105), (0, 210), (105, 105)]
+
+        for _ in range(6):
+            Bomb(all_sprites)
+
+        s = pygame.sprite.Sprite()
+        s.image = pygame.transform.scale(load_image("8-1.png", -1), (100, 100))
+        s.rect = s.image.get_rect()
+        s.rect.x = 20
+        s.rect.y = 20
+        p = pygame.sprite.Group()
+        p.add(s)
+        p.update()
+        if next == 0 or next == 3 or iop == 1:
+            running = True
+        else:
+            running = False
+        ry = False
+        if rt == 0:
+            rt = False
+
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    true = False
+            if event.type == pygame.MOUSEBUTTONDOWN and \
+                    sprite2.rect.collidepoint(event.pos):
+                screen.fill((0, 0, 0))
+                running = False
+                ry = True
+            elif event.type == pygame.MOUSEBUTTONDOWN and \
+                    sp.rect.collidepoint(event.pos):
+                 running = False
+                 o = 0
+                 rt = True
+            else:
+                screen.fill((0, 0, 0))
+                all_sprites.update()
+                b.draw(screen)
+                all_sprites.draw(screen)
+            pygame.display.flip()
+
+        clock = pygame.time.Clock()
+        all_sprites2 = pygame.sprite.Group()
+        a = 'ПРАВИЛА ИГРЫ'
+        hg = '1 алмаз = 10 очков'
+        fg = '1 монета = 5 очков'
+        font = pygame.font.Font(None, 30)
+        while ry:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    ry = False
+                    true = False
+                    rt = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and \
+                    s.rect.collidepoint(event.pos):
+                    o = 1
+                    ry = False
+            string_rendered = font.render(a, 1, pygame.Color('white'))
+            stre = font.render(hg, 1, pygame.Color('white'))
+            stri = font.render(fg, 1, pygame.Color('white'))
+            recte = stre.get_rect()
+            recti = stri.get_rect()
+            recte.top = 300
+            recti.top = 360
+            recte.x = 300
+            recti.x = 300
+            intro_rect = string_rendered.get_rect()
+            intro_rect.top = 200
+            intro_rect.x = 400
+            screen.fill((50, 50, 50))
+            screen.blit(stre, recte)
+            screen.blit(stri, recti)
+            screen.blit(string_rendered, intro_rect)
+            p.draw(screen)
+            all_sprites2.update()
+            all_sprites2.draw(screen)
+            pygame.display.flip()
+        dr = pygame.sprite.Group()
+        ri = pygame.sprite.Sprite()
+        ri.image = pygame.transform.scale(load_image("Background.jpg"), (1200, 800))
+        ri.rect = ri.image.get_rect()
+        ri.rect.x = 0
+        ri.rect.y = 0
+        dr.add(ri)
+        dr.update()
+        number = 0
+        fin = pygame.sprite.Sprite()
+        if next == 2:
+            fin.image = pygame.transform.scale(load_image("Defeat.jpeg"), (100, 400))
+            fin.rect = fin.image.get_rect()
+            fin.rect.x = 3500
+            fin.rect.y = 238
+        elif next == 0:
+            fin.image = pygame.transform.scale(load_image("Defeat.jpeg"), (400, 100))
+            fin.rect = fin.image.get_rect()
+            fin.rect.x = 2900
+            fin.rect.y = 2000
+        else:
+            fin.image = pygame.transform.scale(load_image("Defeat.jpeg"), (400, 100))
+            fin.rect = fin.image.get_rect()
+            fin.rect.x = 1900
+            fin.rect.y = 3000
+        op = pygame.sprite.Group()
+        op.add(fin)
+        gg = Player()
+        if next != 1:
+            gg.rect.x = 300
+            gg.rect.y = 240
+        else:
+            gg.rect.x = 280
+            gg.rect.y = 170
+        gggroup = pygame.sprite.Group()
+        gggroup.add(gg)
+        k = pygame.sprite.Sprite()
+        n = pygame.sprite.Sprite()
+        m = pygame.sprite.Sprite()
+        k.image = pygame.transform.scale(load_image("sure.jpeg"), (400, 300))
+        n.image = pygame.transform.scale(load_image("no.jpeg"), (100, 50))
+        m.image = pygame.transform.scale(load_image("yes.jpeg"), (100, 50))
+        k.rect = k.image.get_rect()
+        n.rect = n.image.get_rect()
+        m.rect = m.image.get_rect()
+        k.rect.x, k.rect.y = 350, 200
+        n.rect.x, n.rect.y = 560, 400
+        m.rect.x, m.rect.y = 420, 400
+        ask = pygame.sprite.Group()
+        ask.add(k)
+        ask.add(n)
+        ask.add(m)
+        if o == 0:
+            dr.draw(screen)
+            level_x, level_y = generate_level(load_level(levels[next]))
+            tiles_group.update()
+            money_group.update()
+            gggroup.draw(screen)
+            tiles_group.draw(screen)
+            money_group.draw(screen)
+            p.draw(screen)
+            pygame.display.flip()
+        oi = False
+        while rt:
+            for event in pygame.event.get():
+                dr.draw(screen)
+                iop = 0
+                if event.type == pygame.QUIT:
+                    rt = False
+                    true = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and \
+                    s.rect.collidepoint(event.pos):
+                    o = 1
+                    gh = True
+                    iop = 0
+                    while gh:
+                        dr.draw(screen)
+                        tiles_group.draw(screen)
+                        money_group.draw(screen)
+                        gggroup.draw(screen)
+                        ask.draw(screen)
+                        pygame.display.flip()
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                rt = False
+                                true = False
+                                gh = False
+                            elif event.type == pygame.MOUSEBUTTONDOWN and \
+                                n.rect.collidepoint(event.pos):
+                                dr.draw(screen)
+                                tiles_group.draw(screen)
+                                money_group.draw(screen)
+                                gggroup.draw(screen)
+                                p.draw(screen)
+                                pygame.display.flip()
+                                gh = False
+                            elif event.type == pygame.MOUSEBUTTONDOWN and \
+                                m.rect.collidepoint(event.pos):
+                                t = pygame.sprite.Sprite()
+                                t.image = pygame.transform.scale(load_image("Defeat.jpeg"),
+                                                                 (1200, 800))
+                                t.rect = t.image.get_rect()
+                                t.rect.x = 0
+                                t.rect.y = 0
+                                gggg = pygame.sprite.Group()
+                                gggg.add(t)
+                                gggg.draw(screen)
+                                pygame.display.flip()
+                                time.sleep(3)
+                                gh = False
+                                rt = False
+                                o = 1
+                                iop = 1
+                            if iop == 1:
+                                break
+                elif event.type == pygame.KEYDOWN:
+                    if pygame.key.get_pressed()[pygame.K_LEFT]:
+                        ty = True
+                        while ty:
+                            for event in pygame.event.get():
+                                if event.type == pygame.KEYUP:
+                                    ty = False
+                            if pygame.sprite.spritecollideany(gg, money_group):
+                                if money_images['money'] == pygame.sprite.spritecollideany(gg, money_group).image:
+                                    number += 5
+                                else:
+                                    number += 10
+                                pygame.sprite.spritecollideany(gg, money_group).kill()
+                            gg.go_left(tiles_group, money_group, fin)
+                            time.sleep(0.1)
+                            dr.draw(screen)
+                            gggroup.update()
+                            tiles_group.update()
+                            gggroup.draw(screen)
+                            if pygame.sprite.spritecollideany(gg, op):
+                                rt = False
+                                oi = True
+                                ty = False
+                            tiles_group.draw(screen)
+                            money_group.update()
+                            money_group.draw(screen)
+                            op.update()
+                            p.draw(screen)
+                            pygame.display.flip()
+                    if iop == 1:
+                        print(8)
+                        break
+                    if pygame.key.get_pressed()[pygame.K_RIGHT]:
+                        ty = True
+                        while ty:
+                            for event in pygame.event.get():
+                                if event.type == pygame.KEYUP:
+                                    ty = False
+                            if pygame.sprite.spritecollideany(gg, money_group):
+                                if money_images['money'] == pygame.sprite.spritecollideany(gg, money_group).image:
+                                    number += 5
+                                else:
+                                    number += 10
+                                pygame.sprite.spritecollideany(gg, money_group).kill()
+                            if pygame.sprite.spritecollideany(gg, op):
+                                rt = False
+                                oi = True
+                                ty = False
+                            gg.go_right(tiles_group, money_group, fin)
+                            time.sleep(0.1)
+                            dr.draw(screen)
+                            gggroup.update()
+                            tiles_group.update()
+                            gggroup.draw(screen)
+                            tiles_group.draw(screen)
+                            money_group.update()
+                            money_group.draw(screen)
+                            op.update()
+                            p.draw(screen)
+                            pygame.display.flip()
+                    if pygame.key.get_pressed()[pygame.K_DOWN]:
+                        ty = True
+                        while ty:
+                            for event in pygame.event.get():
+                                if event.type == pygame.KEYUP:
+                                    ty = False
+                            if pygame.sprite.spritecollideany(gg, money_group):
+                                if money_images['money'] == pygame.sprite.spritecollideany(gg, money_group).image:
+                                    number += 5
+                                else:
+                                    number += 10
+                                pygame.sprite.spritecollideany(gg, money_group).kill()
+                            gg.down(tiles_group, money_group, fin)
+                            time.sleep(0.1)
+                            dr.draw(screen)
+                            gggroup.update()
+                            tiles_group.update()
+                            gggroup.draw(screen)
+                            op.update()
+                            tiles_group.draw(screen)
+                            if pygame.sprite.spritecollideany(gg, op):
+                                rt = False
+                                oi = True
+                                ty = False
+                            money_group.update()
+                            money_group.draw(screen)
+                            p.draw(screen)
+                            pygame.display.flip()
+                    if pygame.key.get_pressed()[pygame.K_UP]:
+                        ty = True
+                        while ty:
+                            for event in pygame.event.get():
+                                if event.type == pygame.KEYUP:
+                                    ty = False
+                            if pygame.sprite.spritecollideany(gg, money_group):
+                                if money_images['money'] == pygame.sprite.spritecollideany(gg, money_group).image:
+                                    number += 5
+                                else:
+                                    number += 10
+                                pygame.sprite.spritecollideany(gg, money_group).kill()
+                            gg.jump(tiles_group, money_group, fin)
+                            time.sleep(0.1)
+                            dr.draw(screen)
+                            op.update()
+                            gggroup.update()
+                            tiles_group.update()
+                            gggroup.draw(screen)
+                            tiles_group.draw(screen)
+                            money_group.update()
+                            if pygame.sprite.spritecollideany(gg, op):
+                                rt = False
+                                oi = True
+                                ty = False
+                            money_group.draw(screen)
+                            p.draw(screen)
+                            pygame.display.flip()
+                    if pygame.sprite.spritecollideany(gg, money_group):
+                        if money_images['money'] == pygame.sprite.spritecollideany(gg, money_group).image:
+                            number += 5
+                        else:
+                            number += 10
+                        pygame.sprite.spritecollideany(gg, money_group).kill()
+                    gggroup.update()
+                    tiles_group.update()
+                    op.update()
+                    gggroup.draw(screen)
+                    tiles_group.draw(screen)
+                    money_group.update()
+                    money_group.draw(screen)
+                    p.draw(screen)
+                    pygame.display.flip()
+                    if pygame.sprite.spritecollideany(gg, op):
+                        rt = False
+                        oi = True
+        if oi:
+            ui = pygame.sprite.Sprite()
+            ui.image = pygame.transform.scale(load_image("finish.jpg"), (1200, 800))
+            ui.rect = ui.image.get_rect()
+            ui.rect.x = 0
+            rt = True
+            ui.rect.y = 0
+            y = pygame.sprite.Group()
+            y.add(ui)
+            iu = pygame.sprite.Sprite()
+            iu.image = pygame.transform.scale(load_image("next.jpg"), (150, 150))
+            iu.rect = iu.image.get_rect()
+            iu.rect.x = 1000
+            iu.rect.y = 400
+            h = pygame.sprite.Group()
+            h.add(iu)
+            all_sprites2 = pygame.sprite.Group()
+            a = f'Вы набрали {number} очков'
+            font = pygame.font.Font(None, 60)
+            o = 0
+        oop = 0
+        while oi:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    oi = False
+                    true = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and \
+                    iu.rect.collidepoint(event.pos):
+                    next += 1
+                    if next == 3:
+                        oop = 1
+                    oi = False
+                y.draw(screen)
+                h.draw(screen)
+                string_rendered = font.render(a, 1, pygame.Color('red'))
+                intro_rect = string_rendered.get_rect()
+                intro_rect.top = 400
+                intro_rect.x = 400
+                screen.blit(string_rendered, intro_rect)
+                all_sprites2.update()
+                all_sprites2.draw(screen)
+                pygame.display.flip()
+        if oop == 1:
+            r = 'Следующие уровни находятся в разработке'
+            string_rendered = font.render(r, 1, pygame.Color('white'))
+            intro_rect = string_rendered.get_rect()
+            intro_rect.top = 300
+            intro_rect.x = 50
+            screen.fill((50, 50, 50))
+            screen.blit(string_rendered, intro_rect)
+            pygame.display.flip()
+            y = True
+            while y:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        y = False
+                        true = False
+    pygame.quit()
