@@ -344,7 +344,7 @@ if __name__ == '__main__':
             pygame.display.flip()
         dr = pygame.sprite.Group()
         ri = pygame.sprite.Sprite()
-        ri.image = pygame.transform.scale(load_image("Background.jpg"), (1200, 800))
+        ri.image = pygame.transform.scale(load_image("Background.png"), (1200, 800))
         ri.rect = ri.image.get_rect()
         ri.rect.x = 0
         ri.rect.y = 0
@@ -353,17 +353,17 @@ if __name__ == '__main__':
         number = 0
         fin = pygame.sprite.Sprite()
         if next == 2:
-            fin.image = pygame.transform.scale(load_image("Defeat.jpeg"), (100, 400))
+            fin.image = pygame.transform.scale(load_image("Defeat.png"), (100, 400))
             fin.rect = fin.image.get_rect()
             fin.rect.x = 3500
             fin.rect.y = 238
         elif next == 0:
-            fin.image = pygame.transform.scale(load_image("Defeat.jpeg"), (400, 100))
+            fin.image = pygame.transform.scale(load_image("Defeat.png"), (400, 100))
             fin.rect = fin.image.get_rect()
             fin.rect.x = 2900
             fin.rect.y = 2000
         else:
-            fin.image = pygame.transform.scale(load_image("Defeat.jpeg"), (400, 100))
+            fin.image = pygame.transform.scale(load_image("Defeat.png"), (400, 100))
             fin.rect = fin.image.get_rect()
             fin.rect.x = 1900
             fin.rect.y = 3000
@@ -441,7 +441,7 @@ if __name__ == '__main__':
                             elif event.type == pygame.MOUSEBUTTONDOWN and \
                                 m.rect.collidepoint(event.pos):
                                 t = pygame.sprite.Sprite()
-                                t.image = pygame.transform.scale(load_image("Defeat.jpeg"),
+                                t.image = pygame.transform.scale(load_image("Defeat.png"),
                                                                  (1200, 800))
                                 t.rect = t.image.get_rect()
                                 t.rect.x = 0
