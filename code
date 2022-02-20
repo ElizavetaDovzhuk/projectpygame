@@ -309,8 +309,8 @@ if __name__ == '__main__':
         clock = pygame.time.Clock()
         all_sprites2 = pygame.sprite.Group()
         a = 'ПРАВИЛА ИГРЫ'
-        hg = '1 алмаз = 10 очков'
-        fg = '1 монета = 5 очков'
+        hg = 'Цель игры – найти выход из лабиринта'
+        fg = '1 монета = 5 очков, 1 алмаз = 10 очков'
         font = pygame.font.Font(None, 30)
         while ry:
             for event in pygame.event.get():
@@ -329,8 +329,8 @@ if __name__ == '__main__':
             recti = stri.get_rect()
             recte.top = 300
             recti.top = 360
-            recte.x = 300
-            recti.x = 300
+            recte.x = 150
+            recti.x = 150
             intro_rect = string_rendered.get_rect()
             intro_rect.top = 200
             intro_rect.x = 400
@@ -487,7 +487,6 @@ if __name__ == '__main__':
                             p.draw(screen)
                             pygame.display.flip()
                     if iop == 1:
-                        print(8)
                         break
                     if pygame.key.get_pressed()[pygame.K_RIGHT]:
                         ty = True
